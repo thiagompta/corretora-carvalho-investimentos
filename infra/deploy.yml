@@ -1,0 +1,76 @@
+name: CI/CD — BTG Order Processing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  test-order-service:
+    name: Testes — Order Service (Java)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Rodar testes
+        run: mvn test
+        working-directory: order-service
+
+  build-and-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: test-order-service
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login no DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build & Push order-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./order-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/btg-order-service:latest
+
+      - name: Build & Push notification-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./notification-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/btg-notification-service:latest
+
+  deploy:
+    name: Deploy — AWS ECS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Login no AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy no ECS
+        run: |
+          aws ecs update-service \
+            --cluster btg-cluster \
+            --service order-service \
+            --force-new-deployment
+          aws ecs update-service \
+            --cluster btg-cluster \
+            --service notification-service \
+            --force-new-deployment
