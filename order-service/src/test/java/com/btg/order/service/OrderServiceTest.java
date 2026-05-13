@@ -34,14 +34,16 @@ class OrderServiceTest {
     @Mock
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    @InjectMocks
+    
     private OrderService service;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(service, "objectMapper", objectMapper);
+        service = new OrderService(repository, kafkaTemplate, objectMapper);
+
+        // Injeta os @Value via reflection
         ReflectionTestUtils.setField(service, "ordersTopic", "btg.orders");
         ReflectionTestUtils.setField(service, "dlqTopic", "btg.orders.dlq");
     }
