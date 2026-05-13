@@ -1,4 +1,4 @@
-# Carvalho Investimentos
+# Corretora Carvalho Investimentos
 
 Sistema de processamento de ordens de investimento com microsserviços, Kafka e automação — desenvolvido para demonstrar habilidades técnicas.
 
