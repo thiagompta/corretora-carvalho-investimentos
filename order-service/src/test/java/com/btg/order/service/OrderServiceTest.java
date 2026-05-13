@@ -15,7 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
-
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,13 +41,15 @@ class OrderServiceTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    void setUp() {
-        service = new OrderService(repository, kafkaTemplate, objectMapper);
+void setUp() {
+    // Registra suporte a LocalDateTime
+    objectMapper.registerModule(new JavaTimeModule());
+    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // Injeta os @Value via reflection
-        ReflectionTestUtils.setField(service, "ordersTopic", "btg.orders");
-        ReflectionTestUtils.setField(service, "dlqTopic", "btg.orders.dlq");
-    }
+    service = new OrderService(repository, kafkaTemplate, objectMapper);
+    ReflectionTestUtils.setField(service, "ordersTopic", "btg.orders");
+    ReflectionTestUtils.setField(service, "dlqTopic", "btg.orders.dlq");
+}
 
     @Test
     @DisplayName("Deve criar ordem com status PROCESSING após publicar no Kafka")
